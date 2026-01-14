@@ -1,0 +1,148 @@
+{
+  "_source": "Based on BEA Regional Price Parities and BLS data",
+  "_note": "Index values relative to national average (100)",
+  "metros": {
+    "Austin, TX": {
+      "state": "TX",
+      "overall_index": 97.2,
+      "housing": 98.5,
+      "food": 96.8,
+      "transportation": 101.2,
+      "healthcare": 95.4,
+      "utilities": 94.1
+    },
+    "San Francisco, CA": {
+      "state": "CA",
+      "overall_index": 179.8,
+      "housing": 272.4,
+      "food": 115.2,
+      "transportation": 133.1,
+      "healthcare": 118.5,
+      "utilities": 128.7
+    },
+    "New York, NY": {
+      "state": "NY",
+      "overall_index": 187.2,
+      "housing": 282.1,
+      "food": 118.9,
+      "transportation": 127.5,
+      "healthcare": 121.4,
+      "utilities": 112.3
+    },
+    "Seattle, WA": {
+      "state": "WA",
+      "overall_index": 149.6,
+      "housing": 192.8,
+      "food": 108.3,
+      "transportation": 118.7,
+      "healthcare": 112.9,
+      "utilities": 98.5
+    },
+    "Denver, CO": {
+      "state": "CO",
+      "overall_index": 128.4,
+      "housing": 156.2,
+      "food": 102.1,
+      "transportation": 105.8,
+      "healthcare": 108.3,
+      "utilities": 96.7
+    },
+    "Miami, FL": {
+      "state": "FL",
+      "overall_index": 123.1,
+      "housing": 147.3,
+      "food": 104.2,
+      "transportation": 108.5,
+      "healthcare": 106.1,
+      "utilities": 101.2
+    },
+    "Chicago, IL": {
+      "state": "IL",
+      "overall_index": 107.3,
+      "housing": 112.8,
+      "food": 103.5,
+      "transportation": 109.2,
+      "healthcare": 105.7,
+      "utilities": 98.4
+    },
+    "Dallas, TX": {
+      "state": "TX",
+      "overall_index": 101.5,
+      "housing": 103.2,
+      "food": 98.7,
+      "transportation": 102.4,
+      "healthcare": 101.8,
+      "utilities": 99.1
+    },
+    "Phoenix, AZ": {
+      "state": "AZ",
+      "overall_index": 103.8,
+      "housing": 108.5,
+      "food": 99.2,
+      "transportation": 101.7,
+      "healthcare": 102.3,
+      "utilities": 102.8
+    },
+    "Boston, MA": {
+      "state": "MA",
+      "overall_index": 152.4,
+      "housing": 198.7,
+      "food": 109.8,
+      "transportation": 112.5,
+      "healthcare": 128.6,
+      "utilities": 118.2
+    },
+    "Atlanta, GA": {
+      "state": "GA",
+      "overall_index": 102.8,
+      "housing": 105.4,
+      "food": 99.1,
+      "transportation": 103.8,
+      "healthcare": 103.2,
+      "utilities": 97.5
+    },
+    "Portland, OR": {
+      "state": "OR",
+      "overall_index": 130.2,
+      "housing": 162.5,
+      "food": 105.8,
+      "transportation": 112.4,
+      "healthcare": 109.7,
+      "utilities": 92.3
+    },
+    "Minneapolis, MN": {
+      "state": "MN",
+      "overall_index": 108.5,
+      "housing": 114.2,
+      "food": 102.8,
+      "transportation": 106.3,
+      "healthcare": 109.4,
+      "utilities": 98.7
+    },
+    "Nashville, TN": {
+      "state": "TN",
+      "overall_index": 101.2,
+      "housing": 102.8,
+      "food": 97.5,
+      "transportation": 100.8,
+      "healthcare": 99.6,
+      "utilities": 96.4
+    },
+    "Raleigh, NC": {
+      "state": "NC",
+      "overall_index": 98.7,
+      "housing": 99.5,
+      "food": 97.2,
+      "transportation": 99.8,
+      "healthcare": 98.4,
+      "utilities": 97.1
+    }
+  },
+  "national_average_expenses": {
+    "housing": 1850,
+    "food": 650,
+    "transportation": 850,
+    "healthcare": 450,
+    "utilities": 350
+  }
+}
