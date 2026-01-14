@@ -24,7 +24,5 @@ Thumbs.db
 *.tmp
 .smbdelete*
 
-# Claude AI
-.claude/
-CLAUDE.md
-*.claude.md
+# Local config
+*.local.md
