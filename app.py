@@ -5,48 +5,72 @@ R&D Demonstrator Application
 This Streamlit app demonstrates the core functionality:
 - Tax calculation (federal + state + FICA)
 - Take-home pay estimation by filing status
-- Cost of living comparison
-- Data visualization with Plotly
+- Cost of living comparison across metropolitan areas
+- ML-powered expense forecasting with seasonal patterns
+- Interactive data visualization with Plotly
+
+Author: Jeremiah Williams
+Course: Project & Portfolio IV (CSBS-AI)
+Date: January 2026
 """
 
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+# Streamlit - Python web framework for data apps
 import streamlit as st
+
+# Plotly - Interactive charting library
 import plotly.express as px
 import plotly.graph_objects as go
+
+# Pandas - Data manipulation
 import pandas as pd
 
+# Local utility modules
 from utils.tax_calculator import (
-    calculate_take_home,
-    get_all_states,
-    get_filing_statuses
+    calculate_take_home,      # Main tax calculation function
+    get_all_states,           # List of US states
+    get_filing_statuses       # Tax filing status options
 )
 from utils.cost_of_living import (
-    get_metros,
-    calculate_expenses,
-    compare_metros,
-    calculate_purchasing_power
+    get_metros,               # Available metro areas
+    calculate_expenses,       # Monthly expense estimates
+    compare_metros,           # Side-by-side comparison
+    calculate_purchasing_power  # Discretionary income calc
 )
 from utils.forecaster import (
-    forecast_expenses,
-    get_seasonal_insights,
-    get_available_metros as get_forecast_metros
+    forecast_expenses,        # ML-powered predictions
+    get_seasonal_insights,    # Seasonal pattern analysis
+    get_available_metros as get_forecast_metros  # Metros with forecast data
 )
 
 
-# Page configuration
+# =============================================================================
+# PAGE CONFIGURATION
+# =============================================================================
+
 st.set_page_config(
     page_title="Reloconomics",
     page_icon="📊",
-    layout="wide"
+    layout="wide"  # Use full screen width for side-by-side comparisons
 )
 
-# Title and description
+# =============================================================================
+# HEADER SECTION
+# =============================================================================
+
 st.title("📊 Reloconomics")
 st.markdown("**Predictive Cost of Living Comparison Tool**")
 st.markdown("_Compare your true purchasing power across cities based on estimated take-home pay_")
 
 st.divider()
 
-# Sidebar inputs
+# =============================================================================
+# SIDEBAR - USER INPUTS
+# =============================================================================
+
 st.sidebar.header("Your Information")
 
 # Salary input
@@ -102,9 +126,12 @@ st.sidebar.caption(
     "Consult a tax professional for accurate calculations."
 )
 
-# Main content
+# =============================================================================
+# MAIN CONTENT - TAX & COST CALCULATIONS
+# =============================================================================
+
 if calculate or salary > 0:
-    # Calculate take-home for both locations
+    # Calculate take-home pay for both locations using tax calculator module
     current_calc = calculate_take_home(salary, filing_status, current_state)
     target_calc = calculate_take_home(salary, filing_status, target_state)
 
@@ -214,7 +241,10 @@ if calculate or salary > 0:
 
     st.divider()
 
-    # Visualization
+    # =========================================================================
+    # PLOTLY VISUALIZATIONS
+    # =========================================================================
+
     st.subheader("📈 Visual Comparison")
 
     viz_col1, viz_col2 = st.columns(2)
@@ -300,7 +330,10 @@ if calculate or salary > 0:
     else:
         st.info("Both locations provide similar purchasing power with your current salary.")
 
-# ML Forecasting Section
+# =========================================================================
+    # ML FORECASTING SECTION (scikit-learn Integration)
+    # =========================================================================
+
     st.divider()
     st.subheader("🔮 Expense Forecast (ML-Powered)")
     st.markdown("_Predicted monthly costs using scikit-learn with seasonal patterns_")

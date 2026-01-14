@@ -1,12 +1,28 @@
 """
-Tax calculation utilities for Reloconomics.
+Tax Calculation Module for Reloconomics
+
 Calculates federal and state income tax estimates based on filing status.
+Implements progressive tax bracket calculations for federal taxes and
+flat/graduated rates for state taxes.
+
+Key Features:
+- Federal tax with progressive brackets (2024 rates)
+- State income tax (all 50 states)
+- FICA taxes (Social Security + Medicare)
+- Take-home pay estimation
+
+Author: Jeremiah Williams
+Course: Project & Portfolio IV (CSBS-AI)
 """
 
 import json
 from pathlib import Path
 
-# Load tax data
+# =============================================================================
+# DATA LOADING
+# =============================================================================
+
+# Path to JSON data files
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 def load_federal_brackets():
@@ -19,27 +35,38 @@ def load_state_taxes():
     with open(DATA_DIR / "state_taxes.json", "r") as f:
         return json.load(f)
 
+# Load tax data at module initialization
 FEDERAL_BRACKETS = load_federal_brackets()
 STATE_TAXES = load_state_taxes()
 
-# FICA rates
-SOCIAL_SECURITY_RATE = 0.062
-SOCIAL_SECURITY_WAGE_BASE = 168600  # 2024 limit
-MEDICARE_RATE = 0.0145
-MEDICARE_ADDITIONAL_RATE = 0.009  # Additional Medicare tax over $200k
+# =============================================================================
+# FICA TAX CONSTANTS (2024)
+# =============================================================================
 
+SOCIAL_SECURITY_RATE = 0.062           # 6.2% Social Security tax
+SOCIAL_SECURITY_WAGE_BASE = 168600     # 2024 wage base limit
+MEDICARE_RATE = 0.0145                 # 1.45% Medicare tax
+MEDICARE_ADDITIONAL_RATE = 0.009       # Additional 0.9% Medicare tax over $200k
+
+
+# =============================================================================
+# FEDERAL TAX CALCULATION
+# =============================================================================
 
 def calculate_federal_tax(gross_income: float, filing_status: str) -> dict:
     """
     Calculate federal income tax based on gross income and filing status.
 
+    Uses progressive tax brackets where each bracket is taxed at its own rate.
+    Example: For $100k income, first $11k taxed at 10%, next portion at 12%, etc.
+
     Args:
-        gross_income: Annual gross income
+        gross_income: Annual gross income before any deductions
         filing_status: One of 'single', 'married_filing_jointly',
                       'married_filing_separately', 'head_of_household'
 
     Returns:
-        Dictionary with tax breakdown
+        Dictionary with tax breakdown including effective rate
     """
     status_data = FEDERAL_BRACKETS.get(filing_status)
     if not status_data:

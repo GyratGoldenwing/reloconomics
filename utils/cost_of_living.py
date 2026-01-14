@@ -1,20 +1,37 @@
 """
-Cost of living utilities for Reloconomics.
-Provides cost estimates based on regional price parities.
+Cost of Living Module for Reloconomics
+
+Provides cost estimates based on Bureau of Economic Analysis (BEA)
+Regional Price Parities. Uses index values where 100 = national average.
+
+Key Features:
+- Regional expense calculations (housing, food, transport, healthcare, utilities)
+- Metro-to-metro cost comparisons
+- Purchasing power analysis (discretionary income after expenses)
+
+Data Source: BEA Regional Price Parities (public government data)
+
+Author: Jeremiah Williams
+Course: Project & Portfolio IV (CSBS-AI)
 """
 
 import json
 from pathlib import Path
 
+# =============================================================================
+# DATA LOADING
+# =============================================================================
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def load_cost_data():
-    """Load cost of living data from JSON file."""
+    """Load cost of living indices and national averages from JSON."""
     with open(DATA_DIR / "cost_of_living.json", "r") as f:
         return json.load(f)
 
 
+# Load data at module initialization for performance
 COST_DATA = load_cost_data()
 
 

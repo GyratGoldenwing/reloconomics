@@ -1,34 +1,58 @@
 """
-Cost of Living Forecaster using scikit-learn
+Machine Learning Forecaster Module for Reloconomics
 
-Predicts actual monthly expenses in dollars with seasonal patterns:
-- Housing, Food, Transportation, Healthcare, Utilities
-- Feature engineering (lag features, seasonality, trend)
-- Linear Regression model training
-- Real dollar amount predictions
+Uses scikit-learn to predict future monthly expenses based on historical data.
+Demonstrates core ML concepts: feature engineering, model training, and inference.
+
+Key ML Concepts Demonstrated:
+- Feature Engineering: Creating predictive features from raw data
+  - Lag features (t-1, t-2, t-3): Capture recent trends
+  - Seasonality (month): Capture annual patterns
+  - Trend (time index): Capture long-term price increases
+
+- Model Training: Linear Regression with train/test split
+- Evaluation Metrics: MAE (Mean Absolute Error), R² (coefficient of determination)
+- Prediction: Generate actual dollar forecasts for future months
+
+Author: Jeremiah Williams
+Course: Project & Portfolio IV (CSBS-AI)
 """
 
 import json
 from pathlib import Path
 import numpy as np
 
-# scikit-learn imports
+# =============================================================================
+# SCIKIT-LEARN IMPORTS
+# =============================================================================
+
+# LinearRegression: Simple, interpretable model for time series
 from sklearn.linear_model import LinearRegression
+
+# Evaluation metrics to measure prediction accuracy
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
+# =============================================================================
+# DATA LOADING
+# =============================================================================
+
 def load_historical_expenses() -> dict:
-    """Load historical expense data from JSON file."""
+    """Load historical expense data from JSON file (60 months of data)."""
     data_path = Path(__file__).parent.parent / "data" / "historical_expenses.json"
     with open(data_path, "r") as f:
         return json.load(f)
 
 
 def get_available_metros() -> list:
-    """Get list of metros with historical expense data."""
+    """Get list of metros with historical expense data available for forecasting."""
     data = load_historical_expenses()
     return list(data["data"].keys())
 
+
+# =============================================================================
+# FEATURE ENGINEERING
+# =============================================================================
 
 def prepare_features(values: list, dates: list) -> tuple:
     """
@@ -67,6 +91,10 @@ def prepare_features(values: list, dates: list) -> tuple:
 
     return np.array(X), np.array(y)
 
+
+# =============================================================================
+# MODEL TRAINING
+# =============================================================================
 
 def train_expense_model(metro: str, category: str) -> dict:
     """
@@ -115,6 +143,10 @@ def train_expense_model(metro: str, category: str) -> dict:
         "last_date": dates[-1]
     }
 
+
+# =============================================================================
+# EXPENSE FORECASTING
+# =============================================================================
 
 def forecast_expenses(metro: str, months_ahead: int = 6) -> dict:
     """
