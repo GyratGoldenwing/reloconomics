@@ -43,7 +43,8 @@ from utils.cost_of_living import (
 from utils.forecaster import (
     forecast_expenses,        # ML-powered predictions
     get_seasonal_insights,    # Seasonal pattern analysis
-    get_available_metros as get_forecast_metros  # Metros with forecast data
+    get_available_metros as get_forecast_metros,  # Metros with forecast data
+    compare_forecasts         # Multi-horizon forecast comparison
 )
 from utils.affordability_map import (
     create_affordability_map,  # Choropleth heat map
@@ -509,6 +510,95 @@ if (calculate or salary > 0) and inputs_valid:
                 )
         else:
             st.info(f"Forecast data not available for {target_metro}")
+
+    # =========================================================================
+    # MULTI-HORIZON FORECAST COMPARISON TABLE
+    # =========================================================================
+
+    if current_metro in forecast_metros and target_metro in forecast_metros:
+        st.markdown("### 📊 Forecast Comparison: 3, 6, 9, 12 Months")
+        st.markdown("_Predicted monthly expenses by category at each time horizon_")
+
+        forecast_comparison = compare_forecasts(current_metro, target_metro, horizons=[3, 6, 9, 12])
+
+        if "error" not in forecast_comparison:
+            # Build comparison table data
+            categories = ["housing", "food", "transportation", "utilities", "healthcare"]
+            horizons = [3, 6, 9, 12]
+
+            # Create tabs for each time horizon
+            tab_now, tab_3m, tab_6m, tab_9m, tab_12m = st.tabs(["Now", "3 Months", "6 Months", "9 Months", "12 Months"])
+
+            def build_comparison_table(data_key, date_label=""):
+                """Helper to build a comparison table for a given horizon."""
+                table_data = {
+                    "Category": [],
+                    f"{current_metro.split(',')[0]}": [],
+                    f"{target_metro.split(',')[0]}": [],
+                    "Difference": []
+                }
+
+                for cat in categories:
+                    cat_data = forecast_comparison["categories"][cat]
+                    if data_key == "current":
+                        vals = cat_data["current"]
+                    else:
+                        vals = cat_data["forecasts"][data_key]
+
+                    diff_display = f"${vals['diff']:+,.0f}"
+                    if data_key != "current" and vals.get('diff_pct'):
+                        diff_display += f" ({vals['diff_pct']:+.1f}%)"
+
+                    # Color indicator
+                    if vals['diff'] > 0:
+                        diff_display = f"🔴 {diff_display}"
+                    elif vals['diff'] < 0:
+                        diff_display = f"🟢 {diff_display}"
+
+                    table_data["Category"].append(cat.title())
+                    table_data[f"{current_metro.split(',')[0]}"].append(f"${vals['metro1']:,.0f}")
+                    table_data[f"{target_metro.split(',')[0]}"].append(f"${vals['metro2']:,.0f}")
+                    table_data["Difference"].append(diff_display)
+
+                # Add totals row
+                if data_key == "current":
+                    totals = forecast_comparison["totals"]["current"]
+                else:
+                    totals = forecast_comparison["totals"][data_key]
+
+                total_diff = f"${totals['diff']:+,.0f}"
+                if data_key != "current" and totals.get('diff_pct'):
+                    total_diff += f" ({totals['diff_pct']:+.1f}%)"
+                if totals['diff'] > 0:
+                    total_diff = f"🔴 {total_diff}"
+                elif totals['diff'] < 0:
+                    total_diff = f"🟢 {total_diff}"
+
+                table_data["Category"].append("**TOTAL**")
+                table_data[f"{current_metro.split(',')[0]}"].append(f"**${totals['metro1']:,.0f}**")
+                table_data[f"{target_metro.split(',')[0]}"].append(f"**${totals['metro2']:,.0f}**")
+                table_data["Difference"].append(f"**{total_diff}**")
+
+                return pd.DataFrame(table_data)
+
+            with tab_now:
+                st.dataframe(build_comparison_table("current"), hide_index=True, use_container_width=True)
+
+            with tab_3m:
+                st.caption(f"Forecast for {forecast_comparison['forecast_dates'][3]}")
+                st.dataframe(build_comparison_table(3), hide_index=True, use_container_width=True)
+
+            with tab_6m:
+                st.caption(f"Forecast for {forecast_comparison['forecast_dates'][6]}")
+                st.dataframe(build_comparison_table(6), hide_index=True, use_container_width=True)
+
+            with tab_9m:
+                st.caption(f"Forecast for {forecast_comparison['forecast_dates'][9]}")
+                st.dataframe(build_comparison_table(9), hide_index=True, use_container_width=True)
+
+            with tab_12m:
+                st.caption(f"Forecast for {forecast_comparison['forecast_dates'][12]}")
+                st.dataframe(build_comparison_table(12), hide_index=True, use_container_width=True)
 
     # Seasonal Insights
     st.markdown("### 📅 Seasonal Patterns")

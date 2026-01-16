@@ -314,3 +314,92 @@ def get_seasonal_insights(metro: str) -> dict:
         "insights": insights,
         "seasonal_notes": data.get("seasonal_notes", {})
     }
+
+
+# =============================================================================
+# MULTI-HORIZON FORECAST COMPARISON
+# =============================================================================
+
+def compare_forecasts(metro1: str, metro2: str, horizons: list = [3, 6, 9, 12]) -> dict:
+    """
+    Compare forecasted expenses between two metros at multiple time horizons.
+
+    Args:
+        metro1: First metro (current location)
+        metro2: Second metro (target location)
+        horizons: List of months ahead to forecast (default: 3, 6, 9, 12)
+
+    Returns:
+        Comparison data with forecasts at each horizon by category
+    """
+    categories = ["housing", "food", "transportation", "utilities", "healthcare"]
+    max_horizon = max(horizons)
+
+    # Get forecasts for both metros
+    forecast1 = forecast_expenses(metro1, months_ahead=max_horizon)
+    forecast2 = forecast_expenses(metro2, months_ahead=max_horizon)
+
+    if "error" in forecast1:
+        return {"error": f"Could not forecast {metro1}: {forecast1['error']}"}
+    if "error" in forecast2:
+        return {"error": f"Could not forecast {metro2}: {forecast2['error']}"}
+
+    # Build comparison structure
+    comparison = {
+        "metro1": metro1,
+        "metro2": metro2,
+        "horizons": horizons,
+        "categories": {},
+        "totals": {}
+    }
+
+    # Current values (latest historical)
+    current1 = {cat: forecast1["historical_by_category"][cat][-1] for cat in categories}
+    current2 = {cat: forecast2["historical_by_category"][cat][-1] for cat in categories}
+
+    for category in categories:
+        comparison["categories"][category] = {
+            "current": {
+                "metro1": round(current1[category], 0),
+                "metro2": round(current2[category], 0),
+                "diff": round(current2[category] - current1[category], 0)
+            },
+            "forecasts": {}
+        }
+
+        for h in horizons:
+            # Get forecast value at horizon h (index h-1 since 0-indexed)
+            val1 = forecast1["forecast_by_category"][category][h - 1]
+            val2 = forecast2["forecast_by_category"][category][h - 1]
+
+            comparison["categories"][category]["forecasts"][h] = {
+                "metro1": round(val1, 0),
+                "metro2": round(val2, 0),
+                "diff": round(val2 - val1, 0),
+                "diff_pct": round(((val2 - val1) / val1) * 100, 1) if val1 > 0 else 0
+            }
+
+    # Calculate totals at each horizon
+    comparison["totals"]["current"] = {
+        "metro1": round(sum(current1.values()), 0),
+        "metro2": round(sum(current2.values()), 0),
+        "diff": round(sum(current2.values()) - sum(current1.values()), 0)
+    }
+
+    for h in horizons:
+        total1 = sum(forecast1["forecast_by_category"][cat][h - 1] for cat in categories)
+        total2 = sum(forecast2["forecast_by_category"][cat][h - 1] for cat in categories)
+
+        comparison["totals"][h] = {
+            "metro1": round(total1, 0),
+            "metro2": round(total2, 0),
+            "diff": round(total2 - total1, 0),
+            "diff_pct": round(((total2 - total1) / total1) * 100, 1) if total1 > 0 else 0
+        }
+
+    # Add forecast dates for reference
+    comparison["forecast_dates"] = {
+        h: forecast1["forecast_dates"][h - 1] for h in horizons
+    }
+
+    return comparison
