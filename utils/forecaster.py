@@ -38,10 +38,20 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # =============================================================================
 
 def load_historical_expenses() -> dict:
-    """Load historical expense data from JSON file (60 months of data)."""
-    data_path = Path(__file__).parent.parent / "data" / "historical_expenses.json"
-    with open(data_path, "r") as f:
-        return json.load(f)
+    """
+    Load historical expense data from JSON file (60 months of data).
+
+    Returns:
+        Dictionary with historical expense data, or empty dict on error
+    """
+    try:
+        data_path = Path(__file__).parent.parent / "data" / "historical_expenses.json"
+        with open(data_path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"data": {}, "error": "Historical data file not found"}
+    except json.JSONDecodeError:
+        return {"data": {}, "error": "Invalid JSON in data file"}
 
 
 def get_available_metros() -> list:
@@ -105,43 +115,50 @@ def train_expense_model(metro: str, category: str) -> dict:
         category: Expense category (housing, food, etc.)
 
     Returns:
-        Trained model with metrics
+        Trained model with metrics, or error dict on failure
     """
-    data = load_historical_expenses()
+    try:
+        data = load_historical_expenses()
 
-    if metro not in data["data"]:
-        return {"error": f"No data for {metro}"}
+        if "error" in data:
+            return {"error": data["error"]}
 
-    metro_data = data["data"][metro]
-    dates = [d["date"] for d in metro_data]
-    values = [d[category] for d in metro_data]
+        if metro not in data["data"]:
+            return {"error": f"No data for {metro}"}
 
-    X, y = prepare_features(values, dates)
+        metro_data = data["data"][metro]
+        dates = [d["date"] for d in metro_data]
+        values = [d[category] for d in metro_data]
 
-    if X is None:
-        return {"error": "Insufficient data"}
+        X, y = prepare_features(values, dates)
 
-    # Train/test split - last 6 months for validation
-    split_idx = len(X) - 6
-    X_train, X_test = X[:split_idx], X[split_idx:]
-    y_train, y_test = y[:split_idx], y[split_idx:]
+        if X is None:
+            return {"error": "Insufficient data"}
 
-    # Train model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+        # Train/test split - last 6 months for validation
+        split_idx = len(X) - 6
+        X_train, X_test = X[:split_idx], X[split_idx:]
+        y_train, y_test = y[:split_idx], y[split_idx:]
 
-    # Evaluate
-    y_pred = model.predict(X_test)
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+        # Train model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
 
-    return {
-        "model": model,
-        "mae": round(mae, 2),
-        "r2": round(r2, 4),
-        "last_values": values[-3:],
-        "last_date": dates[-1]
-    }
+        # Evaluate
+        y_pred = model.predict(X_test)
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+
+        return {
+            "model": model,
+            "mae": round(mae, 2),
+            "r2": round(r2, 4),
+            "last_values": values[-3:],
+            "last_date": dates[-1]
+        }
+
+    except Exception as e:
+        return {"error": f"Model training failed: {str(e)}"}
 
 
 # =============================================================================
