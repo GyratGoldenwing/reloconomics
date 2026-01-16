@@ -115,8 +115,29 @@ from utils.cost_of_living import get_metro_data
 current_state = get_metro_data(current_metro)["state"]
 target_state = get_metro_data(target_metro)["state"]
 
-# Calculate button
-calculate = st.sidebar.button("Calculate Comparison", type="primary", use_container_width=True)
+# =============================================================================
+# INPUT VALIDATION
+# =============================================================================
+
+# Validation: ensure different cities selected
+cities_valid = current_metro != target_metro
+salary_valid = salary >= 10000  # Minimum salary for meaningful comparison
+
+if not cities_valid:
+    st.sidebar.warning("⚠️ Please select different cities to compare")
+
+if not salary_valid:
+    st.sidebar.warning("⚠️ Enter a salary of at least $10,000")
+
+inputs_valid = cities_valid and salary_valid
+
+# Calculate button (disabled if validation fails)
+calculate = st.sidebar.button(
+    "Calculate Comparison",
+    type="primary",
+    use_container_width=True,
+    disabled=not inputs_valid
+)
 
 # Disclaimer
 st.sidebar.divider()
@@ -130,7 +151,7 @@ st.sidebar.caption(
 # MAIN CONTENT - TAX & COST CALCULATIONS
 # =============================================================================
 
-if calculate or salary > 0:
+if (calculate or salary > 0) and inputs_valid:
     # Calculate take-home pay for both locations using tax calculator module
     current_calc = calculate_take_home(salary, filing_status, current_state)
     target_calc = calculate_take_home(salary, filing_status, target_state)
