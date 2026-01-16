@@ -45,6 +45,10 @@ from utils.forecaster import (
     get_seasonal_insights,    # Seasonal pattern analysis
     get_available_metros as get_forecast_metros  # Metros with forecast data
 )
+from utils.affordability_map import (
+    create_affordability_map,  # Choropleth heat map
+    get_affordability_summary  # State comparison summary
+)
 
 
 # =============================================================================
@@ -192,7 +196,7 @@ if (calculate or salary > 0) and inputs_valid:
     with col2:
         st.subheader(f"📍 {target_metro}")
 
-        # Calculate difference
+        # Calculate difference - negative means LESS money (bad)
         take_home_diff = target_calc['take_home_annual'] - current_calc['take_home_annual']
 
         st.metric(
@@ -201,6 +205,11 @@ if (calculate or salary > 0) and inputs_valid:
             f"${take_home_diff:+,.0f} vs current",
             delta_color="normal"
         )
+        # Explicit color indicator for clarity
+        if take_home_diff < 0:
+            st.caption(f"🔴 You keep **${abs(take_home_diff):,.0f} less** per year here")
+        elif take_home_diff > 0:
+            st.caption(f"🟢 You keep **${take_home_diff:,.0f} more** per year here")
 
         # Tax breakdown
         with st.expander("Tax Breakdown"):
@@ -213,7 +222,7 @@ if (calculate or salary > 0) and inputs_valid:
             st.write(f"**Total Taxes:** ${target_calc['total_taxes']:,.0f}")
             st.write(f"**Overall Tax Rate:** {target_calc['overall_tax_rate']:.1f}%")
 
-        # Purchasing power
+        # Purchasing power - negative means LESS money to spend (bad)
         discretionary_diff = target_power['discretionary_income'] - current_power['discretionary_income']
         st.metric(
             "Monthly Discretionary Income",
@@ -221,6 +230,11 @@ if (calculate or salary > 0) and inputs_valid:
             f"${discretionary_diff:+,.0f} vs current",
             delta_color="normal"
         )
+        # Explicit color indicator for clarity
+        if discretionary_diff < 0:
+            st.caption(f"🔴 **${abs(discretionary_diff):,.0f} less** per month to spend")
+        elif discretionary_diff > 0:
+            st.caption(f"🟢 **${discretionary_diff:,.0f} more** per month to spend")
 
     st.divider()
 
@@ -350,6 +364,45 @@ if (calculate or salary > 0) and inputs_valid:
         )
     else:
         st.info("Both locations provide similar purchasing power with your current salary.")
+
+    # =========================================================================
+    # AFFORDABILITY HEAT MAP
+    # =========================================================================
+
+    st.divider()
+    st.subheader("🗺️ Affordability Map")
+    st.markdown("_See how cost of living compares across all US states relative to your current location_")
+
+    # Create the choropleth map
+    affordability_fig = create_affordability_map(
+        base_state=current_state,
+        target_state=target_state,
+        title="US Cost of Living"
+    )
+    st.plotly_chart(affordability_fig, use_container_width=True)
+
+    # Legend explanation
+    map_col1, map_col2, map_col3 = st.columns(3)
+    with map_col1:
+        st.markdown("🟢 **Green** = Cheaper than your location")
+    with map_col2:
+        st.markdown("⬜ **White** = Similar to your location")
+    with map_col3:
+        st.markdown("🔴 **Red** = More expensive than your location")
+
+    # Show summary for target state
+    summary = get_affordability_summary(current_state, target_state)
+    if "error" not in summary:
+        if summary["is_cheaper"]:
+            st.caption(
+                f"📍 **{summary['target_name']}** is **{abs(summary['overall_diff_percent']):.1f}% cheaper** "
+                f"overall than {summary['base_name']} (housing: {summary['housing_diff_percent']:+.1f}%)"
+            )
+        else:
+            st.caption(
+                f"📍 **{summary['target_name']}** is **{summary['overall_diff_percent']:.1f}% more expensive** "
+                f"overall than {summary['base_name']} (housing: {summary['housing_diff_percent']:+.1f}%)"
+            )
 
 # =========================================================================
     # ML FORECASTING SECTION (scikit-learn Integration)
