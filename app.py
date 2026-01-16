@@ -44,7 +44,8 @@ from utils.forecaster import (
     forecast_expenses,        # ML-powered predictions
     get_seasonal_insights,    # Seasonal pattern analysis
     get_available_metros as get_forecast_metros,  # Metros with forecast data
-    compare_forecasts         # Multi-horizon forecast comparison
+    compare_forecasts,        # Multi-horizon forecast comparison
+    get_best_worst_months     # Cheapest/most expensive months
 )
 from utils.affordability_map import (
     create_affordability_map,  # Choropleth heat map
@@ -629,6 +630,66 @@ if (calculate or salary > 0) and inputs_valid:
                             f"(${data['peak_value']:,.0f}), lowest in {data['low_month']} "
                             f"(${data['low_value']:,.0f}) — {data['seasonal_variance']:.0f}% swing"
                         )
+
+    # Best & Worst Months Comparison
+    st.markdown("### 💰 Best & Worst Months to Budget")
+    st.markdown("_Cheapest and most expensive months based on historical data_")
+
+    bw_col1, bw_col2 = st.columns(2)
+
+    with bw_col1:
+        if current_metro in forecast_metros:
+            bw_current = get_best_worst_months(current_metro)
+            if "error" not in bw_current:
+                st.markdown(f"**{current_metro}**")
+
+                # Cheapest months
+                st.markdown("🟢 **Cheapest 3 Months:**")
+                for month, cost in bw_current["cheapest_months"]:
+                    st.caption(f"  • {month}: ${cost:,.0f}/mo")
+
+                # Most expensive months
+                st.markdown("🔴 **Most Expensive 3 Months:**")
+                for month, cost in bw_current["most_expensive_months"]:
+                    st.caption(f"  • {month}: ${cost:,.0f}/mo")
+
+    with bw_col2:
+        if target_metro in forecast_metros:
+            bw_target = get_best_worst_months(target_metro)
+            if "error" not in bw_target:
+                st.markdown(f"**{target_metro}**")
+
+                # Cheapest months
+                st.markdown("🟢 **Cheapest 3 Months:**")
+                for month, cost in bw_target["cheapest_months"]:
+                    st.caption(f"  • {month}: ${cost:,.0f}/mo")
+
+                # Most expensive months
+                st.markdown("🔴 **Most Expensive 3 Months:**")
+                for month, cost in bw_target["most_expensive_months"]:
+                    st.caption(f"  • {month}: ${cost:,.0f}/mo")
+
+    # Show comparison insight
+    if current_metro in forecast_metros and target_metro in forecast_metros:
+        if "error" not in bw_current and "error" not in bw_target:
+            best_current = bw_current["annual_low"]
+            best_target = bw_target["annual_low"]
+            worst_current = bw_current["annual_high"]
+            worst_target = bw_target["annual_high"]
+
+            # Compare the best months
+            if best_target[1] < best_current[1]:
+                savings = best_current[1] - best_target[1]
+                st.success(
+                    f"💡 **Tip:** {target_metro.split(',')[0]}'s cheapest month ({best_target[0]}: ${best_target[1]:,.0f}) "
+                    f"is **${savings:,.0f} less** than {current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
+                )
+            else:
+                extra = best_target[1] - best_current[1]
+                st.warning(
+                    f"💡 **Note:** Even {target_metro.split(',')[0]}'s cheapest month ({best_target[0]}: ${best_target[1]:,.0f}) "
+                    f"costs **${extra:,.0f} more** than {current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
+                )
 
     # ML explanation
     with st.expander("How the ML Forecast Works"):

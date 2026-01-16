@@ -316,6 +316,52 @@ def get_seasonal_insights(metro: str) -> dict:
     }
 
 
+def get_best_worst_months(metro: str) -> dict:
+    """
+    Get the 3 cheapest and 3 most expensive months for total expenses.
+
+    Returns:
+        Dictionary with cheapest_months and most_expensive_months lists
+    """
+    data = load_historical_expenses()
+
+    if metro not in data["data"]:
+        return {"error": f"No data for {metro}"}
+
+    metro_data = data["data"][metro]
+    categories = ["housing", "food", "transportation", "utilities", "healthcare"]
+
+    # Calculate total monthly expenses averaged by month
+    monthly_totals = {}
+    for record in metro_data:
+        month = int(record["date"].split("-")[1])
+        total = sum(record[cat] for cat in categories)
+        if month not in monthly_totals:
+            monthly_totals[month] = []
+        monthly_totals[month].append(total)
+
+    # Average each month
+    monthly_avgs = {m: np.mean(vals) for m, vals in monthly_totals.items()}
+
+    # Sort by average total
+    sorted_months = sorted(monthly_avgs.items(), key=lambda x: x[1])
+
+    month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    # Get 3 cheapest and 3 most expensive
+    cheapest = [(month_names[m], round(v, 0)) for m, v in sorted_months[:3]]
+    most_expensive = [(month_names[m], round(v, 0)) for m, v in sorted_months[-3:][::-1]]
+
+    return {
+        "metro": metro,
+        "cheapest_months": cheapest,  # List of (month_name, avg_total)
+        "most_expensive_months": most_expensive,
+        "annual_low": cheapest[0],
+        "annual_high": most_expensive[0]
+    }
+
+
 # =============================================================================
 # MULTI-HORIZON FORECAST COMPARISON
 # =============================================================================
