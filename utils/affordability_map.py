@@ -176,55 +176,155 @@ def create_affordability_map(
         plot_bgcolor="rgba(0,0,0,0)"
     )
 
-    # Add marker for target state if provided
-    if target_state and target_state in df["state_code"].values:
+    # State centroids (approximate) - used for markers and arc
+    state_coords = {
+        "AL": (32.7, -86.8), "AK": (64.0, -153.0), "AZ": (34.3, -111.7),
+        "AR": (34.9, -92.4), "CA": (37.2, -119.4), "CO": (39.0, -105.5),
+        "CT": (41.6, -72.7), "DE": (39.0, -75.5), "FL": (28.6, -82.4),
+        "GA": (32.6, -83.4), "HI": (20.8, -156.3), "ID": (44.4, -114.6),
+        "IL": (40.0, -89.2), "IN": (39.9, -86.3), "IA": (42.0, -93.5),
+        "KS": (38.5, -98.4), "KY": (37.8, -85.7), "LA": (31.0, -92.0),
+        "ME": (45.3, -69.0), "MD": (39.0, -76.7), "MA": (42.2, -71.5),
+        "MI": (44.3, -85.4), "MN": (46.3, -94.3), "MS": (32.7, -89.7),
+        "MO": (38.4, -92.5), "MT": (47.0, -109.6), "NE": (41.5, -99.8),
+        "NV": (39.5, -116.9), "NH": (43.7, -71.6), "NJ": (40.2, -74.7),
+        "NM": (34.5, -106.0), "NY": (42.9, -75.5), "NC": (35.5, -79.8),
+        "ND": (47.4, -100.5), "OH": (40.4, -82.8), "OK": (35.6, -97.5),
+        "OR": (43.9, -120.6), "PA": (40.9, -77.8), "RI": (41.7, -71.5),
+        "SC": (33.9, -80.9), "SD": (44.4, -100.2), "TN": (35.9, -86.4),
+        "TX": (31.5, -99.4), "UT": (39.3, -111.7), "VT": (44.0, -72.7),
+        "VA": (37.5, -78.8), "WA": (47.4, -120.5), "WV": (38.9, -80.5),
+        "WI": (44.6, -89.7), "WY": (43.0, -107.5), "DC": (38.9, -77.0)
+    }
+
+    # Add current location marker
+    if base_state in state_coords:
+        base_lat, base_lon = state_coords[base_state]
+
+        # Current location - home marker
+        fig.add_trace(go.Scattergeo(
+            lon=[base_lon],
+            lat=[base_lat],
+            mode="markers",
+            marker=dict(
+                size=16,
+                color="#2196F3",  # Blue for current
+                symbol="circle",
+                line=dict(width=3, color="white")
+            ),
+            name="Your Location",
+            hoverinfo="text",
+            hovertext=f"📍 {base_name} (You are here)"
+        ))
+
+    # Add target state marker and arc if provided
+    if target_state and target_state in df["state_code"].values and target_state != base_state:
         target_row = df[df["state_code"] == target_state].iloc[0]
         target_name = target_row["state_name"]
         target_diff = target_row["relative_diff"]
 
-        # State centroids (approximate)
-        state_coords = {
-            "AL": (32.7, -86.8), "AK": (64.0, -153.0), "AZ": (34.3, -111.7),
-            "AR": (34.9, -92.4), "CA": (37.2, -119.4), "CO": (39.0, -105.5),
-            "CT": (41.6, -72.7), "DE": (39.0, -75.5), "FL": (28.6, -82.4),
-            "GA": (32.6, -83.4), "HI": (20.8, -156.3), "ID": (44.4, -114.6),
-            "IL": (40.0, -89.2), "IN": (39.9, -86.3), "IA": (42.0, -93.5),
-            "KS": (38.5, -98.4), "KY": (37.8, -85.7), "LA": (31.0, -92.0),
-            "ME": (45.3, -69.0), "MD": (39.0, -76.7), "MA": (42.2, -71.5),
-            "MI": (44.3, -85.4), "MN": (46.3, -94.3), "MS": (32.7, -89.7),
-            "MO": (38.4, -92.5), "MT": (47.0, -109.6), "NE": (41.5, -99.8),
-            "NV": (39.5, -116.9), "NH": (43.7, -71.6), "NJ": (40.2, -74.7),
-            "NM": (34.5, -106.0), "NY": (42.9, -75.5), "NC": (35.5, -79.8),
-            "ND": (47.4, -100.5), "OH": (40.4, -82.8), "OK": (35.6, -97.5),
-            "OR": (43.9, -120.6), "PA": (40.9, -77.8), "RI": (41.7, -71.5),
-            "SC": (33.9, -80.9), "SD": (44.4, -100.2), "TN": (35.9, -86.4),
-            "TX": (31.5, -99.4), "UT": (39.3, -111.7), "VT": (44.0, -72.7),
-            "VA": (37.5, -78.8), "WA": (47.4, -120.5), "WV": (38.9, -80.5),
-            "WI": (44.6, -89.7), "WY": (43.0, -107.5), "DC": (38.9, -77.0)
-        }
-
-        if target_state in state_coords:
-            lat, lon = state_coords[target_state]
+        if target_state in state_coords and base_state in state_coords:
+            target_lat, target_lon = state_coords[target_state]
+            base_lat, base_lon = state_coords[base_state]
 
             # Marker color based on affordability
             marker_color = "#d73027" if target_diff > 0 else "#1a9850"
 
+            # Create curved arc from base to target
+            # Generate points along a great circle with an upward arc
+            import numpy as np
+            num_points = 50
+            t = np.linspace(0, 1, num_points)
+
+            # Interpolate lat/lon
+            arc_lons = base_lon + t * (target_lon - base_lon)
+            arc_lats = base_lat + t * (target_lat - base_lat)
+
+            # Add upward curve (parabolic arc)
+            # Peak at midpoint, scaled by distance
+            distance = np.sqrt((target_lat - base_lat)**2 + (target_lon - base_lon)**2)
+            arc_height = min(distance * 0.3, 8)  # Cap the arc height
+            arc_lats = arc_lats + arc_height * 4 * t * (1 - t)  # Parabolic curve
+
+            # Draw the arc line
             fig.add_trace(go.Scattergeo(
-                lon=[lon],
-                lat=[lat],
+                lon=arc_lons.tolist(),
+                lat=arc_lats.tolist(),
+                mode="lines",
+                line=dict(
+                    width=3,
+                    color=marker_color,
+                    dash="dot"
+                ),
+                name="Route",
+                hoverinfo="skip",
+                showlegend=False
+            ))
+
+            # Add arrowhead at the end of arc (pointing to target)
+            arrow_lat = arc_lats[-3]
+            arrow_lon = arc_lons[-3]
+            fig.add_trace(go.Scattergeo(
+                lon=[arc_lons[-1]],
+                lat=[arc_lats[-1]],
+                mode="markers",
+                marker=dict(
+                    size=12,
+                    color=marker_color,
+                    symbol="triangle-down",
+                    angle=0
+                ),
+                hoverinfo="skip",
+                showlegend=False
+            ))
+
+            # Bullseye/target marker - outer ring
+            fig.add_trace(go.Scattergeo(
+                lon=[target_lon],
+                lat=[target_lat],
+                mode="markers",
+                marker=dict(
+                    size=35,
+                    color="rgba(255,255,255,0.3)",
+                    symbol="circle",
+                    line=dict(width=3, color=marker_color)
+                ),
+                hoverinfo="skip",
+                showlegend=False
+            ))
+
+            # Bullseye - middle ring
+            fig.add_trace(go.Scattergeo(
+                lon=[target_lon],
+                lat=[target_lat],
+                mode="markers",
+                marker=dict(
+                    size=24,
+                    color="rgba(255,255,255,0.5)",
+                    symbol="circle",
+                    line=dict(width=2, color=marker_color)
+                ),
+                hoverinfo="skip",
+                showlegend=False
+            ))
+
+            # Bullseye - center dot
+            fig.add_trace(go.Scattergeo(
+                lon=[target_lon],
+                lat=[target_lat],
                 mode="markers+text",
                 marker=dict(
-                    size=20,
+                    size=14,
                     color=marker_color,
-                    symbol="star",
+                    symbol="circle",
                     line=dict(width=2, color="white")
                 ),
-                text=[f"📍 {target_name}"],
+                text=[target_name],
                 textposition="top center",
-                textfont=dict(size=12, color="white"),
-                name="Target Location",
+                textfont=dict(size=11, color="white", family="Arial Black"),
+                name="Target",
                 hoverinfo="text",
-                hovertext=f"{target_name}: {target_diff:+.1f}% vs your location"
+                hovertext=f"🎯 {target_name}: {target_diff:+.1f}% vs your location"
             ))
 
     return fig
