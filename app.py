@@ -193,92 +193,85 @@ if (calculate or salary > 0) and inputs_valid:
     # ==========================================================================
     # SECTION 1: TAKE-HOME PAY COMPARISON
     # ==========================================================================
-    st.subheader("💵 Take-Home Pay Comparison")
+    st.markdown("### 💵 Take-Home Pay Comparison")
     st.caption("See how much you'll actually keep after federal, state, and FICA taxes")
 
-    # Display results in columns
-    col1, col2 = st.columns(2)
+    # Calculate difference for target comparison
+    take_home_diff = target_calc['take_home_annual'] - current_calc['take_home_annual']
+    discretionary_diff = target_power['discretionary_income'] - current_power['discretionary_income']
 
-    with col1:
-        st.subheader(f"📍 {current_metro}")
-        st.metric(
-            "Estimated Take-Home Pay",
-            f"${current_calc['take_home_annual']:,.0f}/yr",
-            f"${current_calc['take_home_monthly']:,.0f}/mo"
-        )
-        st.caption("📍 Your current location")
+    # Display results in columns with visual container
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
 
-        # Tax breakdown
-        with st.expander("Tax Breakdown"):
-            st.write(f"**Gross Income:** ${salary:,.0f}")
-            st.write(f"**Standard Deduction:** ${current_calc['standard_deduction']:,.0f}")
-            st.write(f"**Federal Tax:** ${current_calc['federal_tax']:,.0f} ({current_calc['federal_effective_rate']:.1f}%)")
-            st.write(f"**State Tax ({current_state}):** ${current_calc['state_tax']:,.0f} ({current_calc['state_rate']:.1f}%)")
-            st.write(f"**FICA:** ${current_calc['total_fica']:,.0f}")
-            st.divider()
-            st.write(f"**Total Taxes:** ${current_calc['total_taxes']:,.0f}")
-            st.write(f"**Overall Tax Rate:** {current_calc['overall_tax_rate']:.1f}%")
+        with col1:
+            st.markdown(f"#### 📍 {current_metro}")
+            st.metric(
+                "Estimated Take-Home Pay",
+                f"${current_calc['take_home_annual']:,.0f}/yr",
+                f"${current_calc['take_home_monthly']:,.0f}/mo"
+            )
+            st.caption("📍 Your current location")
 
-        # Purchasing power
-        st.metric(
-            "Monthly Discretionary Income",
-            f"${current_power['discretionary_income']:,.0f}",
-            f"{100 - current_power['expense_ratio']:.0f}% of take-home"
-        )
-        st.caption("💰 Baseline for comparison")
+            with st.expander("Tax Breakdown"):
+                st.write(f"**Gross Income:** ${salary:,.0f}")
+                st.write(f"**Standard Deduction:** ${current_calc['standard_deduction']:,.0f}")
+                st.write(f"**Federal Tax:** ${current_calc['federal_tax']:,.0f} ({current_calc['federal_effective_rate']:.1f}%)")
+                st.write(f"**State Tax ({current_state}):** ${current_calc['state_tax']:,.0f} ({current_calc['state_rate']:.1f}%)")
+                st.write(f"**FICA:** ${current_calc['total_fica']:,.0f}")
+                st.divider()
+                st.write(f"**Total Taxes:** ${current_calc['total_taxes']:,.0f}")
+                st.write(f"**Overall Tax Rate:** {current_calc['overall_tax_rate']:.1f}%")
 
-    with col2:
-        st.subheader(f"📍 {target_metro}")
+            st.metric(
+                "Monthly Discretionary Income",
+                f"${current_power['discretionary_income']:,.0f}",
+                f"{100 - current_power['expense_ratio']:.0f}% of take-home"
+            )
+            st.caption("💰 Baseline for comparison")
 
-        # Calculate difference - negative means LESS money (bad)
-        take_home_diff = target_calc['take_home_annual'] - current_calc['take_home_annual']
+        with col2:
+            st.markdown(f"#### 📍 {target_metro}")
+            st.metric(
+                "Estimated Take-Home Pay",
+                f"${target_calc['take_home_annual']:,.0f}/yr",
+                f"{'+$' if take_home_diff >= 0 else '-$'}{abs(take_home_diff):,.0f} vs current",
+                delta_color="normal"
+            )
+            if take_home_diff < 0:
+                st.caption(f"🔴 You keep **${abs(take_home_diff):,.0f} less** per year here")
+            elif take_home_diff > 0:
+                st.caption(f"🟢 You keep **${take_home_diff:,.0f} more** per year here")
 
-        st.metric(
-            "Estimated Take-Home Pay",
-            f"${target_calc['take_home_annual']:,.0f}/yr",
-            f"{'+$' if take_home_diff >= 0 else '-$'}{abs(take_home_diff):,.0f} vs current",
-            delta_color="normal"
-        )
-        # Explicit color indicator for clarity
-        if take_home_diff < 0:
-            st.caption(f"🔴 You keep **${abs(take_home_diff):,.0f} less** per year here")
-        elif take_home_diff > 0:
-            st.caption(f"🟢 You keep **${take_home_diff:,.0f} more** per year here")
+            with st.expander("Tax Breakdown"):
+                st.write(f"**Gross Income:** ${salary:,.0f}")
+                st.write(f"**Standard Deduction:** ${target_calc['standard_deduction']:,.0f}")
+                st.write(f"**Federal Tax:** ${target_calc['federal_tax']:,.0f} ({target_calc['federal_effective_rate']:.1f}%)")
+                st.write(f"**State Tax ({target_state}):** ${target_calc['state_tax']:,.0f} ({target_calc['state_rate']:.1f}%)")
+                st.write(f"**FICA:** ${target_calc['total_fica']:,.0f}")
+                st.divider()
+                st.write(f"**Total Taxes:** ${target_calc['total_taxes']:,.0f}")
+                st.write(f"**Overall Tax Rate:** {target_calc['overall_tax_rate']:.1f}%")
 
-        # Tax breakdown
-        with st.expander("Tax Breakdown"):
-            st.write(f"**Gross Income:** ${salary:,.0f}")
-            st.write(f"**Standard Deduction:** ${target_calc['standard_deduction']:,.0f}")
-            st.write(f"**Federal Tax:** ${target_calc['federal_tax']:,.0f} ({target_calc['federal_effective_rate']:.1f}%)")
-            st.write(f"**State Tax ({target_state}):** ${target_calc['state_tax']:,.0f} ({target_calc['state_rate']:.1f}%)")
-            st.write(f"**FICA:** ${target_calc['total_fica']:,.0f}")
-            st.divider()
-            st.write(f"**Total Taxes:** ${target_calc['total_taxes']:,.0f}")
-            st.write(f"**Overall Tax Rate:** {target_calc['overall_tax_rate']:.1f}%")
-
-        # Purchasing power - negative means LESS money to spend (bad)
-        discretionary_diff = target_power['discretionary_income'] - current_power['discretionary_income']
-        # Format main value to handle negative discretionary income
-        disc_value = target_power['discretionary_income']
-        disc_display = f"${disc_value:,.0f}" if disc_value >= 0 else f"-${abs(disc_value):,.0f}"
-        st.metric(
-            "Monthly Discretionary Income",
-            disc_display,
-            f"{'+$' if discretionary_diff >= 0 else '-$'}{abs(discretionary_diff):,.0f} vs current",
-            delta_color="normal"
-        )
-        # Explicit color indicator for clarity
-        if discretionary_diff < 0:
-            st.caption(f"🔴 **${abs(discretionary_diff):,.0f} less** per month to spend")
-        elif discretionary_diff > 0:
-            st.caption(f"🟢 **${discretionary_diff:,.0f} more** per month to spend")
+            disc_value = target_power['discretionary_income']
+            disc_display = f"${disc_value:,.0f}" if disc_value >= 0 else f"-${abs(disc_value):,.0f}"
+            st.metric(
+                "Monthly Discretionary Income",
+                disc_display,
+                f"{'+$' if discretionary_diff >= 0 else '-$'}{abs(discretionary_diff):,.0f} vs current",
+                delta_color="normal"
+            )
+            if discretionary_diff < 0:
+                st.caption(f"🔴 **${abs(discretionary_diff):,.0f} less** per month to spend")
+            elif discretionary_diff > 0:
+                st.caption(f"🟢 **${discretionary_diff:,.0f} more** per month to spend")
 
     st.divider()
 
     # ==========================================================================
     # SECTION 2: MONTHLY EXPENSE COMPARISON
     # ==========================================================================
-    st.subheader("📊 Monthly Expense Comparison")
+    st.markdown("### 📊 Monthly Expense Comparison")
     st.caption("Compare typical monthly costs by category between your two cities")
 
     comparison = compare_metros(current_metro, target_metro)
@@ -342,7 +335,7 @@ if (calculate or salary > 0) and inputs_valid:
     # =========================================================================
     # SECTION 3: VISUAL COMPARISON
     # =========================================================================
-    st.subheader("📈 Visual Comparison")
+    st.markdown("### 📈 Visual Comparison")
     st.caption("Charts showing expense breakdown and budget allocation at a glance")
 
     viz_col1, viz_col2 = st.columns(2)
@@ -451,7 +444,7 @@ if (calculate or salary > 0) and inputs_valid:
 
     # Bottom line summary
     st.divider()
-    st.subheader("💡 Bottom Line")
+    st.markdown("### 💡 Bottom Line")
 
     if discretionary_diff > 0:
         st.success(
@@ -474,7 +467,7 @@ if (calculate or salary > 0) and inputs_valid:
     # =========================================================================
 
     st.divider()
-    st.subheader("🗺️ Affordability Map")
+    st.markdown("### 🗺️ Affordability Map")
     st.markdown("_See how cost of living compares across all US states relative to your current location_")
 
     # Create the choropleth map
@@ -518,7 +511,7 @@ if (calculate or salary > 0) and inputs_valid:
     # =========================================================================
 
     st.divider()
-    st.subheader("🔮 Expense Forecast (ML-Powered)")
+    st.markdown("### 🔮 Expense Forecast (ML-Powered)")
     st.markdown("_Predicted monthly costs using scikit-learn with seasonal patterns_")
 
     # Check which metros have forecast data
