@@ -166,14 +166,28 @@ def create_affordability_map(
             bgcolor="rgba(0,0,0,0)"
         ),
         coloraxis_colorbar=dict(
-            title="% Difference",
+            title=dict(
+                text="Cost Difference",
+                side="right"
+            ),
             ticksuffix="%",
             tickvals=[-20, -10, 0, 10, 20],
-            ticktext=["-20%<br>Cheaper", "-10%", "Same", "+10%", "+20%<br>More Expensive"]
+            ticktext=["20% Less", "10% Less", "Same", "10% More", "20% More"],
+            len=0.6,
+            thickness=15,
+            x=1.02,
+            y=0.5,
+            yanchor="middle"
         ),
-        margin={"r": 0, "t": 60, "l": 0, "b": 0},
+        margin={"r": 80, "t": 60, "l": 0, "b": 0},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)"
+    )
+
+    # Disable scroll zoom on the map
+    fig.update_geos(
+        fitbounds="locations",
+        visible=True
     )
 
     # State centroids (approximate) - used for markers and arc

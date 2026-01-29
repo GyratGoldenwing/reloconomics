@@ -141,7 +141,7 @@ inputs_valid = cities_valid and salary_valid
 calculate = st.sidebar.button(
     "Calculate Comparison",
     type="primary",
-    use_container_width=True,
+    width="stretch",
     disabled=not inputs_valid
 )
 
@@ -176,6 +176,7 @@ if (calculate or salary > 0) and inputs_valid:
             f"${current_calc['take_home_annual']:,.0f}/yr",
             f"${current_calc['take_home_monthly']:,.0f}/mo"
         )
+        st.caption("📍 Your current location")
 
         # Tax breakdown
         with st.expander("Tax Breakdown"):
@@ -194,6 +195,7 @@ if (calculate or salary > 0) and inputs_valid:
             f"${current_power['discretionary_income']:,.0f}",
             f"{100 - current_power['expense_ratio']:.0f}% of take-home"
         )
+        st.caption("💰 Baseline for comparison")
 
     with col2:
         st.subheader(f"📍 {target_metro}")
@@ -204,7 +206,7 @@ if (calculate or salary > 0) and inputs_valid:
         st.metric(
             "Estimated Take-Home Pay",
             f"${target_calc['take_home_annual']:,.0f}/yr",
-            f"${take_home_diff:+,.0f} vs current",
+            f"{'+$' if take_home_diff >= 0 else '-$'}{abs(take_home_diff):,.0f} vs current",
             delta_color="normal"
         )
         # Explicit color indicator for clarity
@@ -226,10 +228,13 @@ if (calculate or salary > 0) and inputs_valid:
 
         # Purchasing power - negative means LESS money to spend (bad)
         discretionary_diff = target_power['discretionary_income'] - current_power['discretionary_income']
+        # Format main value to handle negative discretionary income
+        disc_value = target_power['discretionary_income']
+        disc_display = f"${disc_value:,.0f}" if disc_value >= 0 else f"-${abs(disc_value):,.0f}"
         st.metric(
             "Monthly Discretionary Income",
-            f"${target_power['discretionary_income']:,.0f}",
-            f"${discretionary_diff:+,.0f} vs current",
+            disc_display,
+            f"{'+$' if discretionary_diff >= 0 else '-$'}{abs(discretionary_diff):,.0f} vs current",
             delta_color="normal"
         )
         # Explicit color indicator for clarity
@@ -246,14 +251,14 @@ if (calculate or salary > 0) and inputs_valid:
     comparison = compare_metros(current_metro, target_metro)
 
     expense_data = {
-        "Category": ["Housing", "Food", "Transportation", "Healthcare", "Utilities", "**Total**"],
+        "Category": ["Housing", "Food", "Transportation", "Healthcare", "Utilities", "TOTAL"],
         current_metro: [
             f"${comparison['metro1']['expenses']['housing']:,.0f}",
             f"${comparison['metro1']['expenses']['food']:,.0f}",
             f"${comparison['metro1']['expenses']['transportation']:,.0f}",
             f"${comparison['metro1']['expenses']['healthcare']:,.0f}",
             f"${comparison['metro1']['expenses']['utilities']:,.0f}",
-            f"**${comparison['metro1']['expenses']['total']:,.0f}**"
+            f"${comparison['metro1']['expenses']['total']:,.0f}"
         ],
         target_metro: [
             f"${comparison['metro2']['expenses']['housing']:,.0f}",
@@ -261,20 +266,20 @@ if (calculate or salary > 0) and inputs_valid:
             f"${comparison['metro2']['expenses']['transportation']:,.0f}",
             f"${comparison['metro2']['expenses']['healthcare']:,.0f}",
             f"${comparison['metro2']['expenses']['utilities']:,.0f}",
-            f"**${comparison['metro2']['expenses']['total']:,.0f}**"
+            f"${comparison['metro2']['expenses']['total']:,.0f}"
         ],
         "Difference": [
-            f"${comparison['differences']['housing']['amount']:+,.0f} ({comparison['differences']['housing']['percent']:+.0f}%)",
-            f"${comparison['differences']['food']['amount']:+,.0f} ({comparison['differences']['food']['percent']:+.0f}%)",
-            f"${comparison['differences']['transportation']['amount']:+,.0f} ({comparison['differences']['transportation']['percent']:+.0f}%)",
-            f"${comparison['differences']['healthcare']['amount']:+,.0f} ({comparison['differences']['healthcare']['percent']:+.0f}%)",
-            f"${comparison['differences']['utilities']['amount']:+,.0f} ({comparison['differences']['utilities']['percent']:+.0f}%)",
-            f"**${comparison['differences']['total']['amount']:+,.0f} ({comparison['differences']['total']['percent']:+.0f}%)**"
+            ("🔴 " if comparison['differences']['housing']['amount'] > 0 else "🟢 " if comparison['differences']['housing']['amount'] < 0 else "") + f"${comparison['differences']['housing']['amount']:+,.0f} ({comparison['differences']['housing']['percent']:+.0f}%)",
+            ("🔴 " if comparison['differences']['food']['amount'] > 0 else "🟢 " if comparison['differences']['food']['amount'] < 0 else "") + f"${comparison['differences']['food']['amount']:+,.0f} ({comparison['differences']['food']['percent']:+.0f}%)",
+            ("🔴 " if comparison['differences']['transportation']['amount'] > 0 else "🟢 " if comparison['differences']['transportation']['amount'] < 0 else "") + f"${comparison['differences']['transportation']['amount']:+,.0f} ({comparison['differences']['transportation']['percent']:+.0f}%)",
+            ("🔴 " if comparison['differences']['healthcare']['amount'] > 0 else "🟢 " if comparison['differences']['healthcare']['amount'] < 0 else "") + f"${comparison['differences']['healthcare']['amount']:+,.0f} ({comparison['differences']['healthcare']['percent']:+.0f}%)",
+            ("🔴 " if comparison['differences']['utilities']['amount'] > 0 else "🟢 " if comparison['differences']['utilities']['amount'] < 0 else "") + f"${comparison['differences']['utilities']['amount']:+,.0f} ({comparison['differences']['utilities']['percent']:+.0f}%)",
+            ("🔴 " if comparison['differences']['total']['amount'] > 0 else "🟢 " if comparison['differences']['total']['amount'] < 0 else "") + f"${comparison['differences']['total']['amount']:+,.0f} ({comparison['differences']['total']['percent']:+.0f}%)"
         ]
     }
 
     df = pd.DataFrame(expense_data)
-    st.dataframe(df, hide_index=True, use_container_width=True)
+    st.dataframe(df, hide_index=True, width="stretch")
 
     st.divider()
 
@@ -314,29 +319,61 @@ if (calculate or salary > 0) and inputs_valid:
             yaxis_title="Monthly Cost ($)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with viz_col2:
         # Take-home vs expenses pie charts
+        # Handle edge case: zero or negative discretionary income
+        current_disc = max(0, current_power['discretionary_income'])
+        target_disc = max(0, target_power['discretionary_income'])
+
+        # Check if either location has no discretionary income
+        current_warning = current_power['discretionary_income'] <= 0
+        target_warning = target_power['discretionary_income'] <= 0
+
         fig = go.Figure()
 
         # Current location
-        fig.add_trace(go.Pie(
-            labels=['Expenses', 'Discretionary'],
-            values=[current_power['total_expenses'], current_power['discretionary_income']],
-            name=current_metro,
-            domain={'x': [0, 0.45]},
-            marker_colors=['#ff7f0e', '#2ca02c']
-        ))
+        if current_warning:
+            # Show expenses only with deficit indicator
+            fig.add_trace(go.Pie(
+                labels=['Expenses', 'Deficit'],
+                values=[current_power['total_expenses'], abs(current_power['discretionary_income']) if current_power['discretionary_income'] < 0 else 1],
+                name=current_metro,
+                domain={'x': [0, 0.45]},
+                marker_colors=['#d73027', '#7f0000'],  # Red shades for warning
+                textinfo='label+percent'
+            ))
+        else:
+            fig.add_trace(go.Pie(
+                labels=['Expenses', 'Discretionary'],
+                values=[current_power['total_expenses'], current_disc],
+                name=current_metro,
+                domain={'x': [0, 0.45]},
+                marker_colors=['#ff7f0e', '#2ca02c'],
+                textinfo='label+percent'
+            ))
 
         # Target location
-        fig.add_trace(go.Pie(
-            labels=['Expenses', 'Discretionary'],
-            values=[target_power['total_expenses'], target_power['discretionary_income']],
-            name=target_metro,
-            domain={'x': [0.55, 1]},
-            marker_colors=['#ff7f0e', '#2ca02c']
-        ))
+        if target_warning:
+            # Show expenses only with deficit indicator
+            fig.add_trace(go.Pie(
+                labels=['Expenses', 'Deficit'],
+                values=[target_power['total_expenses'], abs(target_power['discretionary_income']) if target_power['discretionary_income'] < 0 else 1],
+                name=target_metro,
+                domain={'x': [0.55, 1]},
+                marker_colors=['#d73027', '#7f0000'],  # Red shades for warning
+                textinfo='label+percent'
+            ))
+        else:
+            fig.add_trace(go.Pie(
+                labels=['Expenses', 'Discretionary'],
+                values=[target_power['total_expenses'], target_disc],
+                name=target_metro,
+                domain={'x': [0.55, 1]},
+                marker_colors=['#ff7f0e', '#2ca02c'],
+                textinfo='label+percent'
+            ))
 
         fig.update_layout(
             title=f"Monthly Budget Allocation",
@@ -345,7 +382,16 @@ if (calculate or salary > 0) and inputs_valid:
                 dict(text=target_metro.split(',')[0], x=0.82, y=0.5, font_size=12, showarrow=False)
             ]
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+
+        # Show warning if either location has no discretionary income
+        if current_warning or target_warning:
+            warning_cities = []
+            if current_warning:
+                warning_cities.append(current_metro.split(',')[0])
+            if target_warning:
+                warning_cities.append(target_metro.split(',')[0])
+            st.warning(f"⚠️ **Budget Alert:** {', '.join(warning_cities)} expenses exceed take-home pay at this salary level.")
 
     # Bottom line summary
     st.divider()
@@ -381,7 +427,12 @@ if (calculate or salary > 0) and inputs_valid:
         target_state=target_state,
         title="US Cost of Living"
     )
-    st.plotly_chart(affordability_fig, use_container_width=True)
+    # Disable scroll zoom to prevent accidental map movement
+    st.plotly_chart(
+        affordability_fig,
+        width="stretch",
+        config={'scrollZoom': False, 'displayModeBar': True, 'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d']}
+    )
 
     # Legend explanation
     map_col1, map_col2, map_col3 = st.columns(3)
@@ -422,7 +473,7 @@ if (calculate or salary > 0) and inputs_valid:
 
     with forecast_col1:
         if current_metro in forecast_metros:
-            current_forecast = forecast_expenses(current_metro, months_ahead=6)
+            current_forecast = forecast_expenses(current_metro, months_ahead=12)
 
             if "error" not in current_forecast:
                 # Create forecast chart - actual dollars
@@ -453,7 +504,7 @@ if (calculate or salary > 0) and inputs_valid:
                     yaxis_tickprefix="$",
                     hovermode='x unified'
                 )
-                st.plotly_chart(fig_forecast, use_container_width=True)
+                st.plotly_chart(fig_forecast, width="stretch")
 
                 # Show forecast summary
                 last_actual = current_forecast["historical_totals"][-1]
@@ -462,14 +513,15 @@ if (calculate or salary > 0) and inputs_valid:
                 st.metric(
                     f"Projected Monthly Expenses ({current_forecast['forecast_dates'][-1]})",
                     f"${last_forecast:,.0f}",
-                    f"${change:+,.0f} vs today"
+                    f"{'+$' if change >= 0 else '-$'}{abs(change):,.0f} vs today",
+                    delta_color="inverse"  # Higher expenses = bad (red)
                 )
         else:
             st.info(f"Forecast data not available for {current_metro}")
 
     with forecast_col2:
         if target_metro in forecast_metros:
-            target_forecast = forecast_expenses(target_metro, months_ahead=6)
+            target_forecast = forecast_expenses(target_metro, months_ahead=12)
 
             if "error" not in target_forecast:
                 # Create forecast chart
@@ -498,7 +550,7 @@ if (calculate or salary > 0) and inputs_valid:
                     yaxis_tickprefix="$",
                     hovermode='x unified'
                 )
-                st.plotly_chart(fig_forecast2, use_container_width=True)
+                st.plotly_chart(fig_forecast2, width="stretch")
 
                 # Show forecast summary
                 last_actual2 = target_forecast["historical_totals"][-1]
@@ -507,7 +559,8 @@ if (calculate or salary > 0) and inputs_valid:
                 st.metric(
                     f"Projected Monthly Expenses ({target_forecast['forecast_dates'][-1]})",
                     f"${last_forecast2:,.0f}",
-                    f"${change2:+,.0f} vs today"
+                    f"{'+$' if change2 >= 0 else '-$'}{abs(change2):,.0f} vs today",
+                    delta_color="inverse"  # Higher expenses = bad (red)
                 )
         else:
             st.info(f"Forecast data not available for {target_metro}")
@@ -575,31 +628,31 @@ if (calculate or salary > 0) and inputs_valid:
                 elif totals['diff'] < 0:
                     total_diff = f"🟢 {total_diff}"
 
-                table_data["Category"].append("**TOTAL**")
-                table_data[f"{current_metro.split(',')[0]}"].append(f"**${totals['metro1']:,.0f}**")
-                table_data[f"{target_metro.split(',')[0]}"].append(f"**${totals['metro2']:,.0f}**")
-                table_data["Difference"].append(f"**{total_diff}**")
+                table_data["Category"].append("TOTAL")
+                table_data[f"{current_metro.split(',')[0]}"].append(f"${totals['metro1']:,.0f}")
+                table_data[f"{target_metro.split(',')[0]}"].append(f"${totals['metro2']:,.0f}")
+                table_data["Difference"].append(total_diff)
 
                 return pd.DataFrame(table_data)
 
             with tab_now:
-                st.dataframe(build_comparison_table("current"), hide_index=True, use_container_width=True)
+                st.dataframe(build_comparison_table("current"), hide_index=True, width="stretch")
 
             with tab_3m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][3]}")
-                st.dataframe(build_comparison_table(3), hide_index=True, use_container_width=True)
+                st.dataframe(build_comparison_table(3), hide_index=True, width="stretch")
 
             with tab_6m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][6]}")
-                st.dataframe(build_comparison_table(6), hide_index=True, use_container_width=True)
+                st.dataframe(build_comparison_table(6), hide_index=True, width="stretch")
 
             with tab_9m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][9]}")
-                st.dataframe(build_comparison_table(9), hide_index=True, use_container_width=True)
+                st.dataframe(build_comparison_table(9), hide_index=True, width="stretch")
 
             with tab_12m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][12]}")
-                st.dataframe(build_comparison_table(12), hide_index=True, use_container_width=True)
+                st.dataframe(build_comparison_table(12), hide_index=True, width="stretch")
 
     # Seasonal Insights
     st.markdown("### 📅 Seasonal Patterns")
@@ -681,14 +734,16 @@ if (calculate or salary > 0) and inputs_valid:
             if best_target[1] < best_current[1]:
                 savings = best_current[1] - best_target[1]
                 st.success(
-                    f"💡 **Tip:** {target_metro.split(',')[0]}'s cheapest month ({best_target[0]}: ${best_target[1]:,.0f}) "
-                    f"is **${savings:,.0f} less** than {current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
+                    f"💡 Tip: {target_metro.split(',')[0]}'s cheapest month "
+                    f"({best_target[0]}: ${best_target[1]:,.0f}) is ${savings:,.0f} less than "
+                    f"{current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
                 )
             else:
                 extra = best_target[1] - best_current[1]
                 st.warning(
-                    f"💡 **Note:** Even {target_metro.split(',')[0]}'s cheapest month ({best_target[0]}: ${best_target[1]:,.0f}) "
-                    f"costs **${extra:,.0f} more** than {current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
+                    f"💡 Note: Even {target_metro.split(',')[0]}'s cheapest month "
+                    f"({best_target[0]}: ${best_target[1]:,.0f}) costs ${extra:,.0f} more than "
+                    f"{current_metro.split(',')[0]}'s cheapest ({best_current[0]}: ${best_current[1]:,.0f})"
                 )
 
     # ML explanation
@@ -703,7 +758,7 @@ if (calculate or salary > 0) and inputs_valid:
 
         **What This Shows:**
         - Historical monthly expenses in actual dollars
-        - 6-month forecast based on seasonal patterns and trends
+        - 12-month forecast based on seasonal patterns and trends
         - Seasonal peaks and valleys for planning your budget
 
         **Data Source:** BLS Consumer Expenditure Survey (sample data for R&D demonstration)
