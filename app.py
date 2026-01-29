@@ -54,6 +54,21 @@ from utils.affordability_map import (
 
 
 # =============================================================================
+# COLOR PALETTE - Consistent colors across all visualizations
+# =============================================================================
+
+COLORS = {
+    "current": "#3498db",      # Blue - current location
+    "target": "#e67e22",       # Orange - target location
+    "savings": "#27ae60",      # Green - money saved / cheaper
+    "costs": "#e74c3c",        # Red - money lost / more expensive
+    "neutral": "#95a5a6",      # Gray - neutral/same
+    "expenses": "#e67e22",     # Orange - expenses
+    "discretionary": "#27ae60" # Green - discretionary income
+}
+
+
+# =============================================================================
 # PAGE CONFIGURATION
 # =============================================================================
 
@@ -70,6 +85,15 @@ st.set_page_config(
 st.title("📊 Reloconomics")
 st.markdown("**Predictive Cost of Living Comparison Tool**")
 st.markdown("_Compare your true purchasing power across cities based on estimated take-home pay_")
+
+# User flow guidance
+with st.expander("ℹ️ How to use this tool", expanded=False):
+    st.markdown("""
+    1. Enter your salary and filing status in the sidebar
+    2. Select your current city and a target city to compare
+    3. Review your take-home pay difference after taxes
+    4. Explore expense breakdowns, forecasts, and the affordability map
+    """)
 
 st.divider()
 
@@ -166,6 +190,12 @@ if (calculate or salary > 0) and inputs_valid:
     current_power = calculate_purchasing_power(current_calc["take_home_monthly"], current_metro)
     target_power = calculate_purchasing_power(target_calc["take_home_monthly"], target_metro)
 
+    # ==========================================================================
+    # SECTION 1: TAKE-HOME PAY COMPARISON
+    # ==========================================================================
+    st.subheader("💵 Take-Home Pay Comparison")
+    st.caption("See how much you'll actually keep after federal, state, and FICA taxes")
+
     # Display results in columns
     col1, col2 = st.columns(2)
 
@@ -245,8 +275,11 @@ if (calculate or salary > 0) and inputs_valid:
 
     st.divider()
 
-    # Cost comparison table
+    # ==========================================================================
+    # SECTION 2: MONTHLY EXPENSE COMPARISON
+    # ==========================================================================
     st.subheader("📊 Monthly Expense Comparison")
+    st.caption("Compare typical monthly costs by category between your two cities")
 
     comparison = compare_metros(current_metro, target_metro)
 
@@ -281,13 +314,36 @@ if (calculate or salary > 0) and inputs_valid:
     df = pd.DataFrame(expense_data)
     st.dataframe(df, hide_index=True, width="stretch")
 
+    # Percentage breakdown bars
+    st.markdown("**Budget Breakdown by Percentage**")
+    pct_col1, pct_col2 = st.columns(2)
+
+    categories_pct = ["Housing", "Food", "Transport", "Health", "Utilities"]
+    cat_keys = ["housing", "food", "transportation", "healthcare", "utilities"]
+
+    with pct_col1:
+        st.caption(f"{current_metro.split(',')[0]}")
+        total1 = comparison['metro1']['expenses']['total']
+        for cat, key in zip(categories_pct, cat_keys):
+            val = comparison['metro1']['expenses'][key]
+            pct = (val / total1) * 100 if total1 > 0 else 0
+            st.progress(pct / 100, text=f"{cat}: {pct:.0f}%")
+
+    with pct_col2:
+        st.caption(f"{target_metro.split(',')[0]}")
+        total2 = comparison['metro2']['expenses']['total']
+        for cat, key in zip(categories_pct, cat_keys):
+            val = comparison['metro2']['expenses'][key]
+            pct = (val / total2) * 100 if total2 > 0 else 0
+            st.progress(pct / 100, text=f"{cat}: {pct:.0f}%")
+
     st.divider()
 
     # =========================================================================
-    # PLOTLY VISUALIZATIONS
+    # SECTION 3: VISUAL COMPARISON
     # =========================================================================
-
     st.subheader("📈 Visual Comparison")
+    st.caption("Charts showing expense breakdown and budget allocation at a glance")
 
     viz_col1, viz_col2 = st.columns(2)
 
@@ -310,8 +366,8 @@ if (calculate or salary > 0) and inputs_valid:
         ]
 
         fig = go.Figure(data=[
-            go.Bar(name=current_metro, x=categories, y=current_values, marker_color='#1f77b4'),
-            go.Bar(name=target_metro, x=categories, y=target_values, marker_color='#ff7f0e')
+            go.Bar(name=current_metro, x=categories, y=current_values, marker_color=COLORS["current"]),
+            go.Bar(name=target_metro, x=categories, y=target_values, marker_color=COLORS["target"])
         ])
         fig.update_layout(
             title="Monthly Expenses by Category",
@@ -341,7 +397,7 @@ if (calculate or salary > 0) and inputs_valid:
                 values=[current_power['total_expenses'], abs(current_power['discretionary_income']) if current_power['discretionary_income'] < 0 else 1],
                 name=current_metro,
                 domain={'x': [0, 0.45]},
-                marker_colors=['#d73027', '#7f0000'],  # Red shades for warning
+                marker_colors=[COLORS["costs"], '#7f0000'],  # Red shades for warning
                 textinfo='label+percent'
             ))
         else:
@@ -350,7 +406,7 @@ if (calculate or salary > 0) and inputs_valid:
                 values=[current_power['total_expenses'], current_disc],
                 name=current_metro,
                 domain={'x': [0, 0.45]},
-                marker_colors=['#ff7f0e', '#2ca02c'],
+                marker_colors=[COLORS["expenses"], COLORS["discretionary"]],
                 textinfo='label+percent'
             ))
 
@@ -362,7 +418,7 @@ if (calculate or salary > 0) and inputs_valid:
                 values=[target_power['total_expenses'], abs(target_power['discretionary_income']) if target_power['discretionary_income'] < 0 else 1],
                 name=target_metro,
                 domain={'x': [0.55, 1]},
-                marker_colors=['#d73027', '#7f0000'],  # Red shades for warning
+                marker_colors=[COLORS["costs"], '#7f0000'],  # Red shades for warning
                 textinfo='label+percent'
             ))
         else:
@@ -371,7 +427,7 @@ if (calculate or salary > 0) and inputs_valid:
                 values=[target_power['total_expenses'], target_disc],
                 name=target_metro,
                 domain={'x': [0.55, 1]},
-                marker_colors=['#ff7f0e', '#2ca02c'],
+                marker_colors=[COLORS["expenses"], COLORS["discretionary"]],
                 textinfo='label+percent'
             ))
 
@@ -485,7 +541,7 @@ if (calculate or salary > 0) and inputs_valid:
                     y=current_forecast["historical_totals"],
                     mode='lines',
                     name='Historical',
-                    line=dict(color='#1f77b4', width=2)
+                    line=dict(color=COLORS["current"], width=2)
                 ))
 
                 # Forecast total expenses
@@ -494,7 +550,7 @@ if (calculate or salary > 0) and inputs_valid:
                     y=current_forecast["forecast_totals"],
                     mode='lines+markers',
                     name='Forecast',
-                    line=dict(color='#ff7f0e', width=2, dash='dash')
+                    line=dict(color=COLORS["target"], width=2, dash='dash')
                 ))
 
                 fig_forecast.update_layout(
@@ -532,7 +588,7 @@ if (calculate or salary > 0) and inputs_valid:
                     y=target_forecast["historical_totals"],
                     mode='lines',
                     name='Historical',
-                    line=dict(color='#1f77b4', width=2)
+                    line=dict(color=COLORS["current"], width=2)
                 ))
 
                 fig_forecast2.add_trace(go.Scatter(
@@ -540,7 +596,7 @@ if (calculate or salary > 0) and inputs_valid:
                     y=target_forecast["forecast_totals"],
                     mode='lines+markers',
                     name='Forecast',
-                    line=dict(color='#ff7f0e', width=2, dash='dash')
+                    line=dict(color=COLORS["target"], width=2, dash='dash')
                 ))
 
                 fig_forecast2.update_layout(
@@ -635,24 +691,43 @@ if (calculate or salary > 0) and inputs_valid:
 
                 return pd.DataFrame(table_data)
 
+            def show_winner(data_key):
+                """Show which city is cheaper at this horizon."""
+                if data_key == "current":
+                    totals = forecast_comparison["totals"]["current"]
+                else:
+                    totals = forecast_comparison["totals"][data_key]
+                diff = totals['diff']
+                if diff > 0:
+                    st.success(f"🏆 **{current_metro.split(',')[0]}** is cheaper by ${abs(diff):,.0f}/month")
+                elif diff < 0:
+                    st.success(f"🏆 **{target_metro.split(',')[0]}** is cheaper by ${abs(diff):,.0f}/month")
+                else:
+                    st.info("Both cities have similar costs")
+
             with tab_now:
                 st.dataframe(build_comparison_table("current"), hide_index=True, width="stretch")
+                show_winner("current")
 
             with tab_3m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][3]}")
                 st.dataframe(build_comparison_table(3), hide_index=True, width="stretch")
+                show_winner(3)
 
             with tab_6m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][6]}")
                 st.dataframe(build_comparison_table(6), hide_index=True, width="stretch")
+                show_winner(6)
 
             with tab_9m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][9]}")
                 st.dataframe(build_comparison_table(9), hide_index=True, width="stretch")
+                show_winner(9)
 
             with tab_12m:
                 st.caption(f"Forecast for {forecast_comparison['forecast_dates'][12]}")
                 st.dataframe(build_comparison_table(12), hide_index=True, width="stretch")
+                show_winner(12)
 
     # Seasonal Insights
     st.markdown("### 📅 Seasonal Patterns")
@@ -764,12 +839,30 @@ if (calculate or salary > 0) and inputs_valid:
         **Data Source:** BLS Consumer Expenditure Survey (sample data for R&D demonstration)
         """)
 
-# Data sources footer
+# =============================================================================
+# FOOTER
+# =============================================================================
 st.divider()
-st.caption(
-    "**Data Sources:** Federal tax brackets from IRS (2024). "
-    "State tax rates from Tax Foundation. "
-    "Cost of living indices based on BEA Regional Price Parities and BLS data. "
-    "ML forecasts use scikit-learn on historical CPI data. "
-    "All sources are free, public government data."
-)
+
+footer_col1, footer_col2 = st.columns(2)
+
+with footer_col1:
+    st.caption("**Data Sources**")
+    st.caption(
+        "• Federal tax brackets: IRS (2024)\n"
+        "• State tax rates: Tax Foundation\n"
+        "• Cost of living: BEA Regional Price Parities\n"
+        "• Expense data: BLS Consumer Expenditure Survey"
+    )
+
+with footer_col2:
+    st.caption("**Technology**")
+    st.caption(
+        "• Framework: Streamlit (Python)\n"
+        "• ML: scikit-learn (Linear Regression)\n"
+        "• Charts: Plotly\n"
+        "• All data sources are free & public"
+    )
+
+st.caption("---")
+st.caption("⚠️ **Disclaimer:** Estimates only, not financial advice. Consult a tax professional for accurate calculations.")
