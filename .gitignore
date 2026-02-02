@@ -26,3 +26,8 @@ Thumbs.db
 
 # Local config
 *.local.md
+
+# Assignment submissions (not for public repo)
+docs/Iteration*
+docs/*_CHECKLIST.md
+docs/Deployment_Research_Document.*
